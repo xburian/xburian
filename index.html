@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Volejbal - interaktivně</title>
+  <style>
+    :root{--accent:#ff6b35;--bg:#0f1724;--card:#0b1220;--muted:#9aa6b2}
+    *{box-sizing:border-box}
+    body{font-family:Inter,Segoe UI,Roboto,Arial;margin:0;background:linear-gradient(180deg,#071129 0%, #0b1624 100%);color:#e6eef6;line-height:1.45}
+    header{padding:18px 20px;display:flex;align-items:center;gap:14px;border-bottom:1px solid rgba(255,255,255,0.04)}
+    h1{margin:0;font-size:20px}
+    .container{max-width:980px;margin:22px auto;padding:18px}
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:18px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:14px;border-radius:10px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    button{background:var(--accent);border:0;color:#0b1220;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:600}
+    .muted{color:var(--muted);font-size:13px}
+    .row{display:flex;gap:10px;align-items:center}
+    .scoreboard{display:flex;gap:10px;align-items:center;justify-content:space-between}
+    .team{flex:1;padding:12px;border-radius:8px;background:rgba(255,255,255,0.02);text-align:center}
+    .points{font-size:32px;font-weight:700}
+    .small{font-size:13px}
+    label{display:block;font-size:13px;margin-top:8px}
+    input[type=text]{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit}
+    ul{padding-left:18px}
+    .quiz-answer{display:block;margin:8px 0;padding:8px;border-radius:8px;background:rgba(255,255,255,0.01);cursor:pointer}
+    .correct{outline:3px solid rgba(34,197,94,0.15)}
+    .wrong{outline:3px solid rgba(239,68,68,0.12)}
+    .foot{margin-top:12px;color:var(--muted);font-size:13px}
+    canvas{width:100%;height:160px;border-radius:8px;background:linear-gradient(180deg,#062036,#032034);display:block}
+    @media (max-width:900px){.grid{grid-template-columns:1fr;}.container{padding:12px}}
+  </style>
+</head>
+<body>
+  <header>
+    <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='36' height='36'><rect rx='6' width='36' height='36' fill='%23ff6b35'/><circle cx='18' cy='14' r='7' fill='white' opacity='0.95'/></svg>" alt="logo" style="width:36px;height:36px;border-radius:6px;"/>
+    <div>
+      <h1>Volejbal interaktivně</h1>
+      <div class="muted">Rychlá ukázka: skóre, kvíz, seznam hráčů a malá animace</div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="grid">
+      <section class="card">
+        <h2>Pravidla (rychle)</h2>
+        <p class="muted">Klikni na tlačítko níže, aby se zobrazilo/zamklo stručné shrnutí základních pravidel volejbalu.</p>
+        <button id="toggleRules">Zobrazit pravidla</button>
+        <div id="rules" style="margin-top:12px;display:none" class="muted card" >
+          <ul>
+            <li>4 sety do 25 bodů (rozhodující 5. set do 15) — záleží na soutěži.</li>
+            <li>Každý tým může provést max. 3 dotyky před přechodem míče přes síť.</li>
+            <li>Dotek sítě hráčem je faul, stejně tak překročení středové čáry.</li>
+            <li>Podání, přihrávka, útok — základní role v akcích týmu.</li>
+          </ul>
+        </div>
+
+        <hr style="opacity:0.06;margin:16px 0" />
+
+        <h3>Krátký kvíz</h3>
+        <p class="muted">Otestuj znalosti — vyber správnou odpověď.</p>
+        <div id="quiz">
+          <!-- Question template inserted by JS -->
+        </div>
+        <div class="foot">Skóre kvízu: <span id="quizScore">0</span></div>
+
+        <hr style="opacity:0.06;margin:16px 0" />
+
+        <h3>Přidej hráče</h3>
+        <label for="playerName">Jméno hráče</label>
+        <input id="playerName" placeholder="Např. Jana Nováková" />
+        <div style="margin-top:8px" class="row">
+          <button id="addPlayer">Přidat</button>
+          <div class="muted small" id="playersCount">Žádní hráči</div>
+        </div>
+        <ul id="playersList" style="margin-top:12px"></ul>
+
+      </section>
+
+      <aside class="card">
+        <h3>Živé skóre</h3>
+        <div class="scoreboard" style="margin-top:10px;">
+          <div class="team">
+            <div class="small">Tým A</div>
+            <div class="points" id="scoreA">0</div>
+            <div style="margin-top:8px" class="row">
+              <button data-team="A" class="inc">+1</button>
+              <button data-team="A" class="dec">-1</button>
+            </div>
+          </div>
+          <div class="team">
+            <div class="small">Tým B</div>
+            <div class="points" id="scoreB">0</div>
+            <div style="margin-top:8px" class="row">
+              <button data-team="B" class="inc">+1</button>
+              <button data-team="B" class="dec">-1</button>
+            </div>
+          </div>
+        </div>
+
+        <hr style="opacity:0.06;margin:12px 0" />
+
+        <h3>Animace míče</h3>
+        <canvas id="court" width="600" height="160"></canvas>
+        <div class="muted small foot">Míč se odráží od zdi — zkus kliknout pro změnu rychlosti.</div>
+
+        <hr style="opacity:0.06;margin:12px 0" />
+
+        <h3>Rychlé tipy</h3>
+        <ul class="muted">
+          <li>Trénuj především přihrávku a přebírání podání.</li>
+          <li>Komunikace na hřišti šetří chyby.</li>
+          <li>Pro posilování nohou zařaď skoky a výpady.</li>
+        </ul>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    // RULES TOGGLE
+    document.getElementById('toggleRules').addEventListener('click', ()=>{
+      const r = document.getElementById('rules');
+      const btn = document.getElementById('toggleRules');
+      if(r.style.display === 'none'){ r.style.display = 'block'; btn.textContent = 'Skrýt pravidla'; }
+      else { r.style.display = 'none'; btn.textContent = 'Zobrazit pravidla'; }
+    });
+
+    // QUIZ DATA
+    const quizData = [
+      {q:'Kolik doteků míče může tým maximálně provést před přechodem přes síť?', a:['2','3','4'], correct:1},
+      {q:'Do kolika bodů se hraje rozhodující pátý set (v soutěžích)?', a:['15','25','21'], correct:0},
+      {q:'Co je to blok?', a:['Přihrávka do hluboké zóny','Zastavení útoku u sítě skokem a rukama nahoru','Servis'], correct:1}
+    ];
+    let quizIndex=0, quizScore=0;
+    const quizEl = document.getElementById('quiz');
+    function renderQuiz(){
+      const cur = quizData[quizIndex];
+      quizEl.innerHTML = `<div><strong>${cur.q}</strong></div>` + cur.a.map((t,i)=>`<button class="quiz-answer" data-i="${i}">${t}</button>`).join('');
+      document.querySelectorAll('.quiz-answer').forEach(b=>b.addEventListener('click',onAnswer));
+    }
+    function onAnswer(e){
+      const chosen = Number(e.currentTarget.dataset.i);
+      const correct = quizData[quizIndex].correct;
+      if(chosen===correct){ quizScore++; e.currentTarget.classList.add('correct'); }
+      else{ e.currentTarget.classList.add('wrong'); // highlight correct
+        document.querySelectorAll('.quiz-answer')[correct].classList.add('correct');
+      }
+      document.getElementById('quizScore').textContent = quizScore;
+      // move to next
+      setTimeout(()=>{
+        quizIndex = (quizIndex + 1) % quizData.length;
+        renderQuiz();
+      },900);
+    }
+    renderQuiz();
+
+    // PLAYERS LIST
+    const players = [];
+    const playersList = document.getElementById('playersList');
+    const playersCount = document.getElementById('playersCount');
+    document.getElementById('addPlayer').addEventListener('click', ()=>{
+      const name = document.getElementById('playerName').value.trim();
+      if(!name) return alert('Zadej jméno hráče');
+      players.push(name);
+      document.getElementById('playerName').value='';
+      renderPlayers();
+    });
+    function renderPlayers(){
+      playersList.innerHTML = players.map((p,i)=>`<li>${i+1}. ${p} <button data-i="${i}" class="remove">x</button></li>`).join('');
+      playersCount.textContent = players.length? (players.length+' hráčů') : 'Žádní hráči';
+      document.querySelectorAll('.remove').forEach(b=>b.addEventListener('click', (ev)=>{
+        const i = Number(ev.currentTarget.dataset.i);
+        players.splice(i,1); renderPlayers();
+      }));
+    }
+
+    // SCORE
+    let scoreA = 0, scoreB = 0;
+    function updateScores(){
+      document.getElementById('scoreA').textContent = scoreA;
+      document.getElementById('scoreB').textContent = scoreB;
+    }
+    document.querySelectorAll('button.inc').forEach(b=>b.addEventListener('click', (e)=>{
+      const t = e.currentTarget.dataset.team; if(t==='A') scoreA++; else scoreB++; updateScores();
+    }));
+    document.querySelectorAll('button.dec').forEach(b=>b.addEventListener('click', (e)=>{
+      const t = e.currentTarget.dataset.team; if(t==='A') scoreA = Math.max(0,scoreA-1); else scoreB = Math.max(0,scoreB-1); updateScores();
+    }));
+
+    // CANVAS ANIMATION
+    const canvas = document.getElementById('court');
+    const ctx = canvas.getContext('2d');
+    let W = canvas.width, H = canvas.height;
+    let ball = {x:60,y:60, vx:3, vy:2, r:12};
+    function resize(){ W = canvas.width = canvas.clientWidth * devicePixelRatio; H = canvas.height = 160 * devicePixelRatio; canvas.style.height = '160px'; ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0); }
+    resize(); window.addEventListener('resize', resize);
+    function draw(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      // court lines
+      ctx.fillStyle = 'rgba(255,255,255,0.02)'; ctx.fillRect(0, H/2 - 1, canvas.clientWidth, 2);
+      // ball
+      ctx.beginPath(); ctx.fillStyle = '#ffcc99'; ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2); ctx.fill();
+      // shadow
+      ctx.beginPath(); ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.ellipse(ball.x+8, H/ (devicePixelRatio) - 12, ball.r*0.9, ball.r*0.35, 0, 0, Math.PI*2); ctx.fill();
+    }
+    function step(){
+      ball.x += ball.vx; ball.y += ball.vy;
+      if(ball.x + ball.r > canvas.clientWidth || ball.x - ball.r < 0) ball.vx *= -1;
+      if(ball.y + ball.r > (canvas.height/devicePixelRatio) || ball.y - ball.r < 0) ball.vy *= -1;
+      draw(); requestAnimationFrame(step);
+    }
+    step();
+    // click to change speed
+    canvas.addEventListener('click', ()=>{ ball.vx *= 1.3; ball.vy *= 1.3; });
+
+    // small keyboard shortcut: R resets scores
+    window.addEventListener('keydown',(e)=>{ if(e.key.toLowerCase()==='r'){ scoreA=0;scoreB=0;updateScores(); } });
+
+  </script>
+</body>
+</html>
